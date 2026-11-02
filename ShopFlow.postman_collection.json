@@ -1,0 +1,1045 @@
+{
+  "info": {
+    "_postman_id": "c0b9a2c6-11f4-4d90-a6b7-5f27bf793001",
+    "name": "ShopFlow API",
+    "description": "Postman collection for the ShopFlow Django REST API. Set baseUrl and credentials in collection variables. Register or log in to save accessToken and refreshToken automatically. Replace example IDs with IDs from your database.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "newPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "categorySlug",
+      "value": "electronics",
+      "type": "string"
+    },
+    {
+      "key": "variantId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "addressId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "reviewProductId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"{{password}}\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"Customer\",\n  \"role\": \"customer\",\n  \"phone\": \"555-0100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.access_token) pm.collectionVariables.set('accessToken', data.access_token);",
+                  "if (data.refresh_token) pm.collectionVariables.set('refreshToken', data.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register seller",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"{{password}}\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"Seller\",\n  \"role\": \"seller\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.access_token) pm.collectionVariables.set('accessToken', data.access_token);",
+                  "if (data.refresh_token) pm.collectionVariables.set('refreshToken', data.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.access_token) pm.collectionVariables.set('accessToken', data.access_token);",
+                  "if (data.refresh_token) pm.collectionVariables.set('refreshToken', data.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.access_token) pm.collectionVariables.set('accessToken', data.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get current user",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/auth/me/"
+          }
+        },
+        {
+          "name": "Update current user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Name\",\n  \"phone\": \"555-0101\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/me/"
+          }
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"{{password}}\",\n  \"new_password\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/change-password/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users and addresses",
+      "item": [
+        {
+          "name": "Admin management",
+          "item": [
+            {
+              "name": "List users",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/users/?page=1&page_size=20&role=&status=&search="
+              }
+            },
+            {
+              "name": "Get user",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/v1/users/{{userId}}/"
+              }
+            },
+            {
+              "name": "Update user",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"User\",\n  \"role\": \"customer\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/v1/users/{{userId}}/"
+              }
+            },
+            {
+              "name": "Deactivate user",
+              "request": {
+                "method": "DELETE",
+                "description": "Soft-deletes the account by setting status to deleted. Related orders and records are retained.",
+                "url": "{{baseUrl}}/api/v1/users/{{userId}}/"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get user profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/me/"
+          }
+        },
+        {
+          "name": "Update user profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Customer\",\n  \"phone\": \"555-0102\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/users/me/update/"
+          }
+        },
+        {
+          "name": "List addresses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/me/addresses/"
+          }
+        },
+        {
+          "name": "Create address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Home\",\n  \"street_line1\": \"123 Main Street\",\n  \"street_line2\": \"\",\n  \"city\": \"Seattle\",\n  \"state\": \"WA\",\n  \"postal_code\": \"98101\",\n  \"country\": \"US\",\n  \"is_default\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/users/me/addresses/"
+          }
+        },
+        {
+          "name": "Update address",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Home\",\n  \"street_line1\": \"123 Main Street\",\n  \"city\": \"Seattle\",\n  \"state\": \"WA\",\n  \"postal_code\": \"98101\",\n  \"country\": \"US\",\n  \"is_default\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/users/me/addresses/{{addressId}}/"
+          }
+        },
+        {
+          "name": "Delete address",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/users/me/addresses/{{addressId}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/?page=1&page_size=20&search=&category_id={{categoryId}}&min_price=&max_price=&seller_id=&min_rating=&in_stock=true&sort=newest"
+          }
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}/"
+          }
+        },
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/categories/"
+          }
+        },
+        {
+          "name": "Get category and descendants",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/categories/{{categorySlug}}/"
+          }
+        },
+        {
+          "name": "Top products per category",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/top-per-category/?limit=3"
+          }
+        },
+        {
+          "name": "Products above category average",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/above-category-avg/?category_id={{categoryId}}"
+          }
+        },
+        {
+          "name": "Products never purchased",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/never-purchased/"
+          }
+        },
+        {
+          "name": "List seller products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/products/seller/?page=1&page_size=20"
+          }
+        },
+        {
+          "name": "Create seller product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample Product\",\n  \"category_id\": {{categoryId}},\n  \"base_price\": \"49.99\",\n  \"description\": \"A product created from Postman\",\n  \"slug\": \"sample-product-postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/products/seller/create/"
+          }
+        },
+        {
+          "name": "Update seller product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Sample Product\",\n  \"description\": \"Updated description\",\n  \"base_price\": \"59.99\",\n  \"status\": \"active\",\n  \"category_id\": {{categoryId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/products/seller/{{productId}}/"
+          }
+        },
+        {
+          "name": "Add product variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"SAMPLE-POSTMAN-001\",\n  \"variant_name\": \"Standard\",\n  \"price\": \"49.99\",\n  \"stock_quantity\": 10,\n  \"attributes\": {\"color\": \"blue\"}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/products/seller/{{productId}}/variants/"
+          }
+        },
+        {
+          "name": "Add product image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"https://example.com/product.jpg\",\n  \"alt_text\": \"Sample product\",\n  \"display_order\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/products/seller/{{productId}}/images/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Get cart",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/cart/"
+          }
+        },
+        {
+          "name": "Add item to cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": {{variantId}},\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/cart/items/"
+          }
+        },
+        {
+          "name": "Update cart item quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": {{variantId}},\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/cart/items/update/"
+          }
+        },
+        {
+          "name": "Remove item from cart",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/cart/items/{{variantId}}/"
+          }
+        },
+        {
+          "name": "Clear cart",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/cart/clear/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipping_address_id\": {{addressId}},\n  \"coupon_code\": \"\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/orders/checkout/"
+          }
+        },
+        {
+          "name": "List my orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/orders/?page=1&page_size=20&status="
+          }
+        },
+        {
+          "name": "Get order",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/"
+          }
+        },
+        {
+          "name": "Update order status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Process mock payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/payments/mock-process/{{paymentId}}/"
+          }
+        },
+        {
+          "name": "Payment webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_ref\": \"replace-with-transaction-reference\",\n  \"status\": \"success\",\n  \"order_id\": {{orderId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/payments/webhook/"
+          }
+        },
+        {
+          "name": "Get payment",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/"
+          }
+        },
+        {
+          "name": "List order payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/payments/order/{{orderId}}/"
+          }
+        },
+        {
+          "name": "Refund payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer requested refund\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refund/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Add stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": {{variantId}},\n  \"quantity\": 10,\n  \"reason\": \"restock\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/inventory/add-stock/"
+          }
+        },
+        {
+          "name": "Get variant stock",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/inventory/variants/{{variantId}}/"
+          }
+        },
+        {
+          "name": "List inventory movements",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/inventory/movements/?page=1&page_size=20&variant_id={{variantId}}&movement_type="
+          }
+        },
+        {
+          "name": "List low-stock products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/inventory/low-stock/?threshold=10"
+          }
+        },
+        {
+          "name": "Reconcile variant stock",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/inventory/reconcile/{{variantId}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Create product review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{reviewProductId}},\n  \"rating\": 5,\n  \"title\": \"Great product\",\n  \"body\": \"Example review text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reviews/"
+          }
+        },
+        {
+          "name": "List product reviews",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/reviews/product/{{reviewProductId}}/?page=1&page_size=20&rating="
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics and reports",
+      "item": [
+        {
+          "name": "Revenue by seller",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/revenue-by-seller/"
+          }
+        },
+        {
+          "name": "Monthly sales by category",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/monthly-sales-by-category/"
+          }
+        },
+        {
+          "name": "Top products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/top-products/?limit=10"
+          }
+        },
+        {
+          "name": "Frequent customers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/frequent-customers/?min_orders=5"
+          }
+        },
+        {
+          "name": "Categories above average revenue",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/categories-above-avg/"
+          }
+        },
+        {
+          "name": "Customers with no completed orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/no-order-customers/"
+          }
+        },
+        {
+          "name": "Top product per seller",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/top-product-per-seller/"
+          }
+        },
+        {
+          "name": "Customers above average spending",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/above-avg-spenders/"
+          }
+        },
+        {
+          "name": "Products below average category stock",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/below-avg-stock/"
+          }
+        },
+        {
+          "name": "Orders with multiple categories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/multi-category-orders/"
+          }
+        },
+        {
+          "name": "Monthly revenue",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/monthly-revenue/"
+          }
+        },
+        {
+          "name": "Customer lifetime value",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/customers/lifetime-value/"
+          }
+        },
+        {
+          "name": "Product sales ranking",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/product-ranking/"
+          }
+        },
+        {
+          "name": "Category revenue rollup",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/category-revenue-rollup/"
+          }
+        },
+        {
+          "name": "Sales window analysis",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/sales-window/"
+          }
+        },
+        {
+          "name": "Second-highest revenue per category",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/second-highest-per-category/"
+          }
+        },
+        {
+          "name": "Customers ranked by spending",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/customers/ranked-by-spending/"
+          }
+        },
+        {
+          "name": "Consecutive declining months",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/declining-months/"
+          }
+        },
+        {
+          "name": "Order status summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/order-status-summary/"
+          }
+        },
+        {
+          "name": "Orders export",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/orders/export/?last_id=0&page_size=20"
+          }
+        },
+        {
+          "name": "Inventory alerts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/reports/inventory-alerts/?threshold=10"
+          }
+        }
+      ]
+    }
+  ]
+}
