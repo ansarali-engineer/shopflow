@@ -46,7 +46,6 @@ def validate_email(email: str) -> str:
         raise ValueError("A valid email address is required")
     return email.strip().lower()
 
-
 def validate_password(password: str) -> str:
     """
     Validate password strength.

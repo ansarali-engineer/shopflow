@@ -38,7 +38,10 @@ def get_product_detail(product_id):
              (SELECT SUM(pv.stock_quantity - pv.reserved_quantity) FROM product_variants pv WHERE pv.product_id = p.id AND pv.status = 'active') AS total_available_stock,
              (SELECT COALESCE(AVG(r.rating), 0) FROM reviews r WHERE r.product_id = p.id AND r.status = 'published') AS avg_rating,
              (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id AND r.status = 'published') AS review_count,
-             (SELECT COUNT(*) FROM product_variants pv WHERE pv.product_id = p.id AND pv.status = 'active') AS variant_count
+             (SELECT COUNT(*) FROM product_variants pv WHERE pv.product_id = p.id AND pv.status = 'active') AS variant_count,
+             (SELECT pi.image_url FROM product_images pi
+              WHERE pi.product_id = p.id
+              ORDER BY pi.display_order ASC, pi.id ASC LIMIT 1) AS image_url
              FROM products p
              INNER JOIN categories c ON p.category_id = c.id
              INNER JOIN users u ON p.seller_id = u.id
@@ -94,7 +97,10 @@ def get_products_list(search=None, category_id=None, min_price=None, max_price=N
              (SELECT MAX(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.status = 'active') AS max_price,
              (SELECT SUM(pv.stock_quantity - pv.reserved_quantity) FROM product_variants pv WHERE pv.product_id = p.id AND pv.status = 'active') AS available_stock,
              (SELECT COALESCE(AVG(r.rating), 0) FROM reviews r WHERE r.product_id = p.id AND r.status = 'published') AS avg_rating,
-             (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id AND r.status = 'published') AS review_count
+             (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id AND r.status = 'published') AS review_count,
+             (SELECT pi.image_url FROM product_images pi
+              WHERE pi.product_id = p.id
+              ORDER BY pi.display_order ASC, pi.id ASC LIMIT 1) AS image_url
              FROM products p
              INNER JOIN categories c ON p.category_id = c.id
              INNER JOIN users u ON p.seller_id = u.id
@@ -130,10 +136,47 @@ def create_product(seller_id, name, category_id, base_price, description="", slu
     return insert_one(sql, [seller_id, category_id, name, slug, description, base_price, status])
 
 
-def create_product_variant(product_id, sku, variant_name, price, stock_quantity=0, attributes=None, status="active"):
-    sql = """INSERT INTO product_variants (product_id, sku, variant_name, attributes, price, stock_quantity, reserved_quantity, status)
-             VALUES (%s, %s, %s, %s, %s, %s, 0, %s)"""
-    return insert_one(sql, [product_id, sku, variant_name, attributes, price, stock_quantity, status])
+import json
+
+def create_product_variant(
+    product_id,
+    sku,
+    variant_name,
+    price,
+    stock_quantity=0,
+    attributes=None,
+    status="active"
+):
+    attributes_json = (
+        json.dumps(attributes)
+        if attributes is not None
+        else None
+    )
+
+    sql = """
+        INSERT INTO product_variants
+        (
+            product_id,
+            sku,
+            variant_name,
+            attributes,
+            price,
+            stock_quantity,
+            reserved_quantity,
+            status
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, 0, %s)
+    """
+
+    return insert_one(sql, [
+        product_id,
+        sku,
+        variant_name,
+        attributes_json,
+        price,
+        stock_quantity,
+        status
+    ])
 
 
 def add_product_image(product_id, image_url, alt_text="", display_order=0):
@@ -170,15 +213,79 @@ def update_product(product_id, name=None, description=None, base_price=None, sta
 
 
 def get_top_products_per_category(limit=3):
-    sql = """SELECT * FROM (
-             SELECT p.id AS product_id, p.name AS product_name, c.id AS category_id, c.name AS category_name,
-             COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS revenue,
-             DENSE_RANK() OVER (PARTITION BY c.id ORDER BY COALESCE(SUM(oi.quantity * oi.unit_price), 0) DESC) AS rank_in_category
-             FROM products p INNER JOIN categories c ON p.category_id = c.id
-             LEFT JOIN order_items oi ON oi.product_id = p.id
-             LEFT JOIN orders o ON o.id = oi.order_id AND o.status NOT IN ('CANCELLED','REFUNDED')
-             GROUP BY p.id, p.name, c.id, c.name
-             ) ranked WHERE rank_in_category <= %s ORDER BY category_name, rank_in_category"""
+    """
+    Returns top N products per category ranked by revenue (DENSE_RANK window fn).
+    Includes all fields required by the ProductCard component:
+      id, name, category_id, category_name, min_price, max_price, base_price,
+      available_stock, image_url, avg_rating, review_count,
+      seller_first_name, seller_last_name, revenue, rank_in_category.
+    """
+    sql = """
+        SELECT *
+        FROM (
+            SELECT
+                p.id,
+                p.name,
+                p.base_price,
+                p.slug,
+                p.status,
+                c.id   AS category_id,
+                c.name AS category_name,
+                u.first_name AS seller_first_name,
+                u.last_name  AS seller_last_name,
+                -- Price range from active variants (fall back to base_price)
+                COALESCE(
+                    (SELECT MIN(pv.price) FROM product_variants pv
+                     WHERE pv.product_id = p.id AND pv.status = 'active'),
+                    p.base_price
+                ) AS min_price,
+                COALESCE(
+                    (SELECT MAX(pv.price) FROM product_variants pv
+                     WHERE pv.product_id = p.id AND pv.status = 'active'),
+                    p.base_price
+                ) AS max_price,
+                -- Available stock across all active variants
+                COALESCE(
+                    (SELECT SUM(pv.stock_quantity - pv.reserved_quantity)
+                     FROM product_variants pv
+                     WHERE pv.product_id = p.id AND pv.status = 'active'),
+                    0
+                ) AS available_stock,
+                -- Primary image (lowest display_order)
+                (SELECT pi.image_url FROM product_images pi
+                 WHERE pi.product_id = p.id
+                 ORDER BY pi.display_order ASC, pi.id ASC
+                 LIMIT 1) AS image_url,
+                -- Rating summary
+                COALESCE(
+                    (SELECT AVG(r.rating) FROM reviews r
+                     WHERE r.product_id = p.id AND r.status = 'published'),
+                    0
+                ) AS avg_rating,
+                (SELECT COUNT(*) FROM reviews r
+                 WHERE r.product_id = p.id AND r.status = 'published') AS review_count,
+                -- Revenue and ranking
+                COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS revenue,
+                DENSE_RANK() OVER (
+                    PARTITION BY c.id
+                    ORDER BY COALESCE(SUM(oi.quantity * oi.unit_price), 0) DESC
+                ) AS rank_in_category
+            FROM products p
+            INNER JOIN categories c ON p.category_id = c.id
+            INNER JOIN users      u ON p.seller_id   = u.id
+            LEFT JOIN order_items oi ON oi.product_id = p.id
+            LEFT JOIN orders o
+                   ON o.id = oi.order_id
+                  AND o.status NOT IN ('CANCELLED', 'REFUNDED')
+            WHERE p.status = 'active'
+            GROUP BY
+                p.id, p.name, p.base_price, p.slug, p.status,
+                c.id, c.name,
+                u.first_name, u.last_name
+        ) ranked
+        WHERE rank_in_category <= %s
+        ORDER BY category_name ASC, rank_in_category ASC
+    """
     return fetch_all(sql, [limit])
 
 

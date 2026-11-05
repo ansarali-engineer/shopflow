@@ -42,7 +42,18 @@ def product_list(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def product_detail(request, product_id):
-    """GET /api/v1/products/{id}/ - full product detail with variants and images."""
+    """GET /api/v1/products/{id_or_slug}/ - accepts numeric id or slug."""
+    from database.query_helpers import fetch_scalar
+    # If the route captured a string slug (non-numeric), resolve to id first
+    if not str(product_id).isdigit():
+        resolved = fetch_scalar(
+            "SELECT id FROM products WHERE slug = %s AND status = 'active'",
+            [product_id],
+        )
+        if not resolved:
+            return error_response("Product not found", "NOT_FOUND",
+                                  status=status.HTTP_404_NOT_FOUND)
+        product_id = resolved
     product = get_catalog_product(product_id)
     if not product:
         return error_response("Product not found", "NOT_FOUND",
@@ -135,7 +146,7 @@ def seller_create(request):
     return success_response({"product_id": product_id, "message": "Product created"},
                            status=status.HTTP_201_CREATED)
 
-
+2
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated, IsSellerOrAdmin])
 def seller_update(request, product_id):
@@ -159,31 +170,89 @@ def seller_update(request, product_id):
     return success_response({"updated": affected})
 
 
-@api_view(["POST"])
+@api_view(["DELETE"])
 @permission_classes([IsAuthenticated, IsSellerOrAdmin])
-def seller_add_variant(request, product_id):
-    """POST /api/v1/products/seller/{id}/variants/ - add a variant."""
+def seller_delete(request, product_id):
+    """DELETE /api/v1/products/seller/{id}/delete/ — soft-delete own product."""
     owner_id = get_product_owner_id(product_id)
     if owner_id != request.user.id and request.user.role != "admin":
         return error_response("You do not own this product", "PERMISSION_DENIED",
                               status=status.HTTP_403_FORBIDDEN)
+    try:
+        seller_update_product(
+            seller_id=owner_id,
+            product_id=product_id,
+            status="deleted",
+        )
+    except Exception as e:
+        return error_response(str(e), "NOT_FOUND", status=status.HTTP_404_NOT_FOUND)
+    return success_response({"product_id": product_id, "status": "deleted"})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsSellerOrAdmin])
+def seller_add_variant(request, product_id):
+    """POST /api/v1/products/seller/{id}/variants/ - add a variant."""
+
+    owner_id = get_product_owner_id(product_id)
+
+    if owner_id is None:
+        return error_response(
+            "Product not found",
+            "NOT_FOUND",
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if owner_id != request.user.id and request.user.role != "admin":
+        return error_response(
+            "You do not own this product",
+            "PERMISSION_DENIED",
+            status=status.HTTP_403_FORBIDDEN
+        )
 
     data = request.data
-    if not data.get("sku") or not data.get("variant_name") or not data.get("price"):
-        return error_response("sku, variant_name, and price are required",
-                              "VALIDATION_ERROR", status=status.HTTP_400_BAD_REQUEST)
 
-    variant_id = create_product_variant(
-        product_id=product_id,
-        sku=data["sku"],
-        variant_name=data["variant_name"],
-        price=data["price"],
-        stock_quantity=data.get("stock_quantity", 0),
-        attributes=data.get("attributes"),
-    )
-    return success_response({"variant_id": variant_id}, status=status.HTTP_201_CREATED)
+    sku = data.get("sku")
+    variant_name = data.get("variant_name")
+    price = data.get("price")
+    stock_quantity = data.get("stock_quantity", 0)
+    attributes = data.get("attributes")
 
+    if not sku or not variant_name or price is None:
+        return error_response(
+            "sku, variant_name, and price are required",
+            "VALIDATION_ERROR",
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
+    if not isinstance(attributes, (dict, type(None))):
+        return error_response(
+            "attributes must be a JSON object",
+            "VALIDATION_ERROR",
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        variant_id = create_product_variant(
+            product_id=product_id,
+            sku=sku,
+            variant_name=variant_name,
+            price=price,
+            stock_quantity=stock_quantity,
+            attributes=attributes,
+        )
+
+        return success_response(
+            {"variant_id": variant_id},
+            status=status.HTTP_201_CREATED
+        )
+
+    except ValueError as e:
+        return error_response(
+            str(e),
+            "VALIDATION_ERROR",
+            status=status.HTTP_400_BAD_REQUEST
+        )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsSellerOrAdmin])
 def seller_add_image(request, product_id):

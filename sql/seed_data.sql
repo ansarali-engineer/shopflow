@@ -21,15 +21,15 @@ TRUNCATE TABLE coupons;
 TRUNCATE TABLE audit_logs;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- Use Django to hash passwords: python -c "from django.contrib.auth.hashers import make_password; print(make_password('TestPass123!'))"
--- For seed data, we use a known hash. In production, always use make_password.
+-- Sample account password: TestPass123!
+-- Hash generated with Django's configured Argon2 hasher.
 INSERT INTO users (email, password_hash, first_name, last_name, role, status) VALUES
-('admin@shopflow.test', '$argon2id$v=19$m=65536,t=3,p=4$abc123$def456', 'Admin', 'User', 'admin', 'active'),
-('seller1@shopflow.test', '$argon2id$v=19$m=65536,t=3,p=4$abc123$def456', 'John', 'Seller', 'seller', 'active'),
-('seller2@shopflow.test', '$argon2id$v=19$m=65536,t=3,p=4$abc123$def456', 'Jane', 'Merchant', 'seller', 'active'),
-('customer1@shopflow.test', '$argon2id$v=19$m=65536,t=3,p=4$abc123$def456', 'Alice', 'Buyer', 'customer', 'active'),
-('customer2@shopflow.test', '$argon2id$v=19$m=65536,t=3,p=4$abc123$def456', 'Bob', 'Shopper', 'customer', 'active'),
-('customer3@shopflow.test', '$argon2id$v=19$m=65536,t=3,p=4$abc123$def456', 'Charlie', 'Customer', 'customer', 'active');
+('admin@shopflow.test', 'argon2$argon2id$v=19$m=102400,t=2,p=8$VW5WNUtVUWJXTWt6TmtBYUFwbFp2bw$rtsT39EQ9lBubb4xpWAAZpllbOyWGInWYs60LHHWy0c', 'Admin', 'User', 'admin', 'active'),
+('seller1@shopflow.test', 'argon2$argon2id$v=19$m=102400,t=2,p=8$VW5WNUtVUWJXTWt6TmtBYUFwbFp2bw$rtsT39EQ9lBubb4xpWAAZpllbOyWGInWYs60LHHWy0c', 'John', 'Seller', 'seller', 'active'),
+('seller2@shopflow.test', 'argon2$argon2id$v=19$m=102400,t=2,p=8$VW5WNUtVUWJXTWt6TmtBYUFwbFp2bw$rtsT39EQ9lBubb4xpWAAZpllbOyWGInWYs60LHHWy0c', 'Jane', 'Merchant', 'seller', 'active'),
+('customer1@shopflow.test', 'argon2$argon2id$v=19$m=102400,t=2,p=8$VW5WNUtVUWJXTWt6TmtBYUFwbFp2bw$rtsT39EQ9lBubb4xpWAAZpllbOyWGInWYs60LHHWy0c', 'Alice', 'Buyer', 'customer', 'active'),
+('customer2@shopflow.test', 'argon2$argon2id$v=19$m=102400,t=2,p=8$VW5WNUtVUWJXTWt6TmtBYUFwbFp2bw$rtsT39EQ9lBubb4xpWAAZpllbOyWGInWYs60LHHWy0c', 'Bob', 'Shopper', 'customer', 'active'),
+('customer3@shopflow.test', 'argon2$argon2id$v=19$m=102400,t=2,p=8$VW5WNUtVUWJXTWt6TmtBYUFwbFp2bw$rtsT39EQ9lBubb4xpWAAZpllbOyWGInWYs60LHHWy0c', 'Charlie', 'Customer', 'customer', 'active');
 
 -- Addresses
 INSERT INTO addresses (user_id, label, street_line1, city, state, postal_code, country, is_default) VALUES
@@ -51,11 +51,11 @@ INSERT INTO categories (name, slug, parent_id) VALUES
 ('Headphones', 'headphones', 8),
 ('Speakers', 'speakers', 8),
 ('Clothing', 'clothing', NULL),
-('Men', 'men', 10),
-('Women', 'women', 10),
+('Men', 'men', 11),
+('Women', 'women', 11),
 ('Books', 'books', NULL),
-('Fiction', 'fiction', 13),
-('Non-Fiction', 'non-fiction', 13);
+('Fiction', 'fiction', 14),
+('Non-Fiction', 'non-fiction', 14);
 
 -- Products
 INSERT INTO products (seller_id, category_id, name, slug, description, base_price, status) VALUES
@@ -89,14 +89,22 @@ INSERT INTO product_variants (product_id, sku, variant_name, price, stock_quanti
 (9, 'BOOK-SQL-001', 'Paperback', 44.99, 120, 0, 'active'),
 (10, 'GAMING-PC-RTX', 'RTX 4080 / 32GB', 1899.99, 5, 0, 'active');
 
--- Product Images
+-- Product Images  (real Unsplash photos – no auth required)
 INSERT INTO product_images (product_id, image_url, alt_text, display_order) VALUES
-(1, 'https://cdn.shopflow.test/probook-15.jpg', 'ProBook 15', 0),
-(2, 'https://cdn.shopflow.test/ultrabook-air.jpg', 'UltraBook Air', 0),
-(3, 'https://cdn.shopflow.test/galaxy-pro.jpg', 'Galaxy Phone Pro', 0),
-(5, 'https://cdn.shopflow.test/anc-headphones.jpg', 'Noise-Cancel Headphones', 0),
-(6, 'https://cdn.shopflow.test/tshirt.jpg', 'Cotton T-Shirt', 0),
-(10, 'https://cdn.shopflow.test/gaming-desktop.jpg', 'Gaming Desktop', 0);
+(1,  'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&q=80', 'ProBook 15 laptop', 0),
+(1,  'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=600&q=80', 'ProBook 15 keyboard', 1),
+(2,  'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=600&q=80', 'UltraBook Air side view', 0),
+(3,  'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&q=80', 'Galaxy Phone Pro', 0),
+(3,  'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=600&q=80', 'Galaxy Phone Pro back', 1),
+(4,  'https://images.unsplash.com/photo-1625842268584-8f3296236761?w=600&q=80', 'USB-C Hub ports', 0),
+(5,  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80', 'Noise-Cancel Headphones', 0),
+(5,  'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=600&q=80', 'Headphones side', 1),
+(6,  'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80', 'Cotton T-Shirt', 0),
+(7,  'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80', 'Denim Jeans', 0),
+(8,  'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=600&q=80', 'The Python Guide book', 0),
+(9,  'https://images.unsplash.com/photo-1589998059171-988d887df646?w=600&q=80', 'Advanced SQL book', 0),
+(10, 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600&q=80', 'Gaming Desktop', 0),
+(10, 'https://images.unsplash.com/photo-1593640408182-31c228c5e5da?w=600&q=80', 'Gaming Desktop internals', 1);
 
 -- Coupons
 INSERT INTO coupons (code, description, discount_type, discount_value, min_order_amount, max_discount_amount, per_customer_limit, status) VALUES

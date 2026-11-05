@@ -44,7 +44,24 @@ class ShopFlowJWTAuthentication(JWTAuthentication):
     """
     Custom JWT authentication that loads user data via raw SQL
     instead of Django's ORM User model.
+
+    Overrides `authenticate` to return None (anonymous) instead of
+    raising AuthenticationFailed when the token is missing, expired or
+    invalid.  This lets AllowAny / public views work even when the
+    client still sends an old or expired token in the header.
+    DRF's permission layer is responsible for rejecting unauthenticated
+    requests on protected endpoints.
     """
+
+    def authenticate(self, request):
+        """Return (user, token) or None — never raise."""
+        try:
+            return super().authenticate(request)
+        except Exception:
+            # Expired, malformed, or revoked token → treat as anonymous.
+            # Protected views will still reject the request via their
+            # permission classes (IsAuthenticated etc.).
+            return None
 
     def get_user(self, validated_token: AccessToken) -> ShopFlowUser | None:
         try:

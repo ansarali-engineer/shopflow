@@ -59,10 +59,14 @@ def record_movement(variant_id, movement_type, quantity, reason="", order_id=Non
     return insert_one(sql, [variant_id, movement_type, quantity, reason, order_id, reference_type, reference_id])
 
 
-def get_inventory_movements(variant_id=None, movement_type=None, page=1, page_size=20):
+def get_inventory_movements(variant_id=None, movement_type=None, seller_id=None, page=1, page_size=20):
     conditions, params = [], []
-    if variant_id is not None: conditions.append("im.variant_id = %s"); params.append(variant_id)
-    if movement_type is not None: conditions.append("im.movement_type = %s"); params.append(movement_type)
+    if seller_id is not None:
+        conditions.append("p.seller_id = %s"); params.append(seller_id)
+    if variant_id is not None:
+        conditions.append("im.variant_id = %s"); params.append(variant_id)
+    if movement_type is not None:
+        conditions.append("im.movement_type = %s"); params.append(movement_type)
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
     sql = f"""SELECT im.id, im.variant_id, pv.sku, p.name AS product_name, im.movement_type, im.quantity,
              im.reason, im.order_id, im.reference_type, im.reference_id, im.created_at
@@ -71,16 +75,21 @@ def get_inventory_movements(variant_id=None, movement_type=None, page=1, page_si
     return fetch_paginated(sql, params, page, page_size)
 
 
-def get_low_stock_products(threshold=10):
-    sql = """SELECT pv.id AS variant_id, pv.sku, pv.variant_name, pv.stock_quantity, pv.reserved_quantity,
+def get_low_stock_products(threshold=10, seller_id=None):
+    extra = "AND p.seller_id = %s " if seller_id else ""
+    params = [threshold]
+    if seller_id:
+        params.insert(0, seller_id)
+    sql = f"""SELECT pv.id AS variant_id, pv.sku, pv.variant_name, pv.stock_quantity, pv.reserved_quantity,
              (pv.stock_quantity - pv.reserved_quantity) AS available_stock,
              p.id AS product_id, p.name AS product_name,
              u.first_name AS seller_first_name, u.last_name AS seller_last_name, u.email AS seller_email
              FROM product_variants pv INNER JOIN products p ON pv.product_id = p.id
              INNER JOIN users u ON p.seller_id = u.id
-             WHERE pv.status = 'active' AND (pv.stock_quantity - pv.reserved_quantity) < %s
+             WHERE {f'p.seller_id = %s AND ' if seller_id else ''}pv.status = 'active'
+               AND (pv.stock_quantity - pv.reserved_quantity) < %s
              ORDER BY available_stock ASC"""
-    return fetch_all(sql, [threshold])
+    return fetch_all(sql, [seller_id, threshold] if seller_id else [threshold])
 
 
 def reconcile_stock(variant_id):

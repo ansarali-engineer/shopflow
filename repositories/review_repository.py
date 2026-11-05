@@ -13,11 +13,20 @@ def create_review(product_id, user_id, rating, title, body=""):
 def get_product_reviews(product_id, rating=None, page=1, page_size=10):
     conditions = ["r.product_id = %s", "r.status = 'published'"]
     params = [product_id]
-    if rating is not None: conditions.append("r.rating = %s"); params.append(rating)
+    if rating is not None:
+        conditions.append("r.rating = %s"); params.append(rating)
     where_clause = " AND ".join(conditions)
     sql = f"""SELECT r.id, r.product_id, r.user_id, r.rating, r.title, r.body, r.status, r.created_at,
-             u.first_name AS reviewer_first_name, u.last_name AS reviewer_last_name
-             FROM reviews r INNER JOIN users u ON r.user_id = u.id WHERE {where_clause} ORDER BY r.created_at DESC"""
+             u.first_name AS reviewer_first_name, u.last_name AS reviewer_last_name,
+             EXISTS(
+                 SELECT 1 FROM order_items oi
+                 INNER JOIN orders o ON o.id = oi.order_id
+                 WHERE oi.product_id = r.product_id
+                   AND o.customer_id = r.user_id
+                   AND o.status = 'DELIVERED'
+             ) AS verified_purchase
+             FROM reviews r INNER JOIN users u ON r.user_id = u.id
+             WHERE {where_clause} ORDER BY r.created_at DESC"""
     return fetch_paginated(sql, params, page, page_size)
 
 
@@ -29,7 +38,23 @@ def get_review_by_id(review_id):
 
 
 def has_user_reviewed_product(product_id, user_id):
-    count = fetch_scalar("SELECT COUNT(*) FROM reviews WHERE product_id = %s AND user_id = %s", [product_id, user_id]) or 0
+    count = fetch_scalar(
+        "SELECT COUNT(*) FROM reviews WHERE product_id = %s AND user_id = %s",
+        [product_id, user_id],
+    ) or 0
+    return count > 0
+
+
+def has_purchased_product(user_id, product_id):
+    """Return True if user has a DELIVERED order containing this product."""
+    count = fetch_scalar(
+        """SELECT COUNT(*) FROM order_items oi
+           INNER JOIN orders o ON o.id = oi.order_id
+           WHERE oi.product_id = %s
+             AND o.customer_id = %s
+             AND o.status = 'DELIVERED'""",
+        [product_id, user_id],
+    ) or 0
     return count > 0
 
 

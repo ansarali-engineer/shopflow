@@ -45,30 +45,39 @@ def get_user_by_email(email):
 
 
 def list_admin_users(page=1, page_size=20, role=None, status=None, search=None):
-    """Return one filtered page of users and the total matching count."""
+    """Return one filtered page of users (with order_count + total_spent) and total count."""
     filters, params = [], []
     if role:
-        filters.append("role = %s")
+        filters.append("u.role = %s")
         params.append(role)
     if status:
-        filters.append("status = %s")
+        filters.append("u.status = %s")
         params.append(status)
     if search:
         filters.append(
-            "(email LIKE %s OR first_name LIKE %s OR last_name LIKE %s)"
+            "(u.email LIKE %s OR u.first_name LIKE %s OR u.last_name LIKE %s)"
         )
         search_pattern = f"%{search}%"
         params.extend([search_pattern, search_pattern, search_pattern])
 
     where_clause = f" WHERE {' AND '.join(filters)}" if filters else ""
     total = fetch_scalar(
-        f"SELECT COUNT(*) FROM users{where_clause}", params
+        f"SELECT COUNT(*) FROM users u{where_clause}", params
     )
     offset = (page - 1) * page_size
+    # Enrich with order stats via correlated subqueries so the admin table
+    # can display order_count and total_spent without a separate request.
     users = fetch_all(
-        "SELECT id, email, first_name, last_name, phone, role, status, "
-        "created_at, updated_at FROM users"
-        f"{where_clause} ORDER BY id ASC LIMIT %s OFFSET %s",
+        f"""SELECT u.id, u.email, u.first_name, u.last_name, u.phone,
+               u.role, u.status, u.created_at, u.updated_at,
+               (SELECT COUNT(*) FROM orders o
+                WHERE o.customer_id = u.id
+                  AND o.status NOT IN ('CANCELLED','REFUNDED')) AS order_count,
+               (SELECT COALESCE(SUM(o.total_amount), 0) FROM orders o
+                WHERE o.customer_id = u.id
+                  AND o.status NOT IN ('CANCELLED','REFUNDED')) AS total_spent
+            FROM users u{where_clause}
+            ORDER BY u.id ASC LIMIT %s OFFSET %s""",
         [*params, page_size, offset],
     )
     return users, total
@@ -157,11 +166,20 @@ def get_address_by_id(address_id, user_id):
 
 
 def update_address(address_id, user_id, **kwargs):
+    """Update an address. Only known/safe columns are accepted."""
+    ALLOWED = {
+        "label", "street_line1", "street_line2", "city",
+        "state", "postal_code", "country", "is_default",
+    }
     sets, params = [], []
     for col, val in kwargs.items():
-        if val is not None:
+        if col in ALLOWED and val is not None:
             sets.append(f"{col} = %s"); params.append(val)
     if not sets: return 0
+    # If setting a new default, clear existing default first
+    if kwargs.get("is_default"):
+        update_or_delete("UPDATE addresses SET is_default = FALSE WHERE user_id = %s AND id != %s",
+                         [user_id, address_id])
     sets.append("updated_at = %s"); params.append(datetime.utcnow())
     params.extend([address_id, user_id])
     sql = f"UPDATE addresses SET {', '.join(sets)} WHERE id = %s AND user_id = %s"

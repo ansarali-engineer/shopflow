@@ -13,6 +13,8 @@ import logging
 from decimal import Decimal
 from datetime import datetime
 
+from django.utils import timezone
+
 from repositories.coupon_repository import (
     get_coupon_by_code, get_coupon_redemption_count,
     get_customer_coupon_redemption_count, redeem_coupon,
@@ -49,13 +51,27 @@ def validate_and_calculate_discount(code, subtotal, user_id):
     if not coupon:
         raise CouponError("Coupon not found or inactive")
 
-    now = datetime.utcnow()
+    # Use timezone-aware now; make coupon datetimes comparable by stripping tz
+    # if the DB returns naive datetimes (MySQL without tz config).
+    now = timezone.now()
+
+    def _to_naive(dt):
+        """Convert aware dt to naive UTC if needed for comparison."""
+        if dt is None:
+            return None
+        if timezone.is_aware(dt):
+            return dt.replace(tzinfo=None)
+        return dt
+
+    now_naive = now.replace(tzinfo=None)
 
     # Check expiry
-    if coupon.get("valid_until") and coupon["valid_until"] < now:
+    valid_until = _to_naive(coupon.get("valid_until"))
+    if valid_until and valid_until < now_naive:
         raise CouponExpiredError("Coupon has expired")
 
-    if coupon.get("valid_from") and coupon["valid_from"] > now:
+    valid_from = _to_naive(coupon.get("valid_from"))
+    if valid_from and valid_from > now_naive:
         raise CouponNotEligibleError("Coupon is not yet valid")
 
     # Check minimum order amount
